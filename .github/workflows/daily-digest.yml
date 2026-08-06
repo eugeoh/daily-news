@@ -1,0 +1,40 @@
+name: Daily News Digest
+
+on:
+  schedule:
+    # 21:00 UTC = 07:00 AEST (Sydney standard time, UTC+10). GitHub Actions
+    # cron is fixed UTC and does not shift for daylight saving, so this
+    # runs at 08:00 during AEDT (UTC+11, roughly early Oct-early Apr).
+    - cron: "0 21 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Run digest pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          DIGEST_TO_EMAIL: ${{ secrets.DIGEST_TO_EMAIL }}
+          DIGEST_FROM_EMAIL: ${{ secrets.DIGEST_FROM_EMAIL }}
+        run: npm run digest
+
+      - name: Commit digest and dedupe cache
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add digests/ data/seen.json
+          git diff --staged --quiet || git commit -m "Daily digest for $(date -u +%Y-%m-%d)"
+          git push
