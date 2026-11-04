@@ -17,9 +17,9 @@ export async function publish(
 ): Promise<{ path: string; markdown: string; dateStr: string }> {
   const dateStr = formatDate(date);
 
-  const body = articles.length ? renderSections(articles) : "_No new updates from tracked labs today._\n";
+  const body = articles.length ? renderSections(articles) : "_No new updates from tracked sources today._\n";
   const intro = overallSummary ? `${overallSummary}\n\n` : "";
-  const markdown = `# Daily AI Lab Digest — ${dateStr}\n\n${intro}${body}`;
+  const markdown = `# Eug's Daily Digest — ${dateStr}\n\n${intro}${body}`;
 
   await mkdir(DIGESTS_DIR, { recursive: true });
   const filePath = path.join(DIGESTS_DIR, `${dateStr}.md`);
@@ -39,7 +39,7 @@ function renderSections(articles: Article[]): string {
   }
 
   // Anything Gemini failed to categorize (shouldn't normally happen —
-  // summarize() defaults to "Frontier Model & Research" — but don't let a
+  // summarize() defaults to "Market & Strategy" — but don't let a
   // bad category value silently drop an article from the digest).
   const uncategorized = articles.filter((a) => !CATEGORIES.includes(a.category as (typeof CATEGORIES)[number]));
   if (uncategorized.length > 0) {

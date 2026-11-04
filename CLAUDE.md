@@ -1,11 +1,16 @@
-# daily-news
+# Eug's Daily Digest
 
-A GitHub Actions-driven pipeline that fetches the latest news from ~17
-frontier AI labs, world-model startups, dev-tool blogs, and hardware makers
-(see README for the full list), summarizes and categorizes each article in
-plain English via the Gemini API (chosen for its free tier — cheapest
-option, no Anthropic API key involved), writes a dated digest to
-`digests/`, and emails it via Resend.
+A GitHub Actions-driven pipeline that fetches the latest news from
+documentation platforms, AI agent ecosystems, and developer tool blogs
+relevant to Mintlify's market, summarizes and categorizes each article
+via the Gemini API (chosen for its free tier), writes a dated digest to
+`digests/`, and emails it via Resend. If there are no new articles, it
+skips the email entirely.
+
+The digest tracks Mintlify's competitive landscape (ReadMe, GitBook),
+the AI agents/protocols macro trend (Anthropic, OpenAI, LangChain,
+HuggingFace), and the broader developer tools ecosystem (Cursor, Vercel,
+GitHub, Replit).
 
 ## ⚠️ This repository is PUBLIC — never commit secrets
 
@@ -27,12 +32,11 @@ option, no Anthropic API key involved), writes a dated digest to
 - `src/core/Article.ts` — base class representing a single news item (title,
   url, date, source, summary, category).
 - `src/core/NewsSource.ts` — abstract base class every source extends.
-- `src/core/category.ts` — the fixed 5-category enum Gemini classifies into.
-- `src/core/rss.ts` — shared RSS/Atom parser reused by most sources.
+- `src/core/category.ts` — the fixed 4-category enum Gemini classifies into.
+- `src/core/rss.ts` — shared RSS/Atom parser reused by RSS-based sources.
 - `src/sources/*.ts` — one file per source, each a `NewsSource` subclass.
   Adding a source = new file + one line in `src/sources/index.ts`. Don't
-  touch the pipeline to add a source. Two are stubs (xAI, Meta AI) —
-  blocked at the network level, see README.
+  touch the pipeline to add a source.
 - `src/pipeline/*.ts` — fetch → dedupe → summarize (+ categorize, + overall
   summary) → publish → notify. Each stage does one job and is independently
   testable. `summarize.ts` retries with backoff on Gemini's free-tier 429s.

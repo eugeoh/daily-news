@@ -1,0 +1,52 @@
+import * as cheerio from "cheerio";
+import { Article } from "../core/Article.js";
+import { NewsSource } from "../core/NewsSource.js";
+import { fetchHtml } from "../core/http.js";
+
+const BLOG_URL = "https://www.gitbook.com/blog";
+const LOOKBACK_DAYS = 7;
+
+export class GitBookSource extends NewsSource {
+  readonly name = "GitBook";
+
+  async fetch(): Promise<Article[]> {
+    try {
+      const html = await fetchHtml(BLOG_URL);
+      const $ = cheerio.load(html);
+      const cutoff = Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+      const byUrl = new Map<string, Article>();
+
+      $('a[href*="/blog/"]').each((_, el) => {
+        const $a = $(el);
+        const href = $a.attr("href");
+        if (!href || href === "/blog" || href === "/blog/" || href.endsWith("/blog")) return;
+
+        const title =
+          $a.find("h3, h2, h1").first().text().trim() || $a.text().trim();
+        if (!title || title.length < 10) return;
+
+        const context = $a.closest("article, li, div, section").text();
+        // GitBook uses "DD Mon, YYYY" format (e.g. "6 Oct, 2026")
+        const dateMatch = context.match(
+          /\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?),?\s+\d{4}/,
+        );
+        if (!dateMatch) return;
+
+        const publishedAt = new Date(dateMatch[0]);
+        if (Number.isNaN(publishedAt.getTime())) return;
+        if (publishedAt.getTime() < cutoff) return;
+
+        const url = new URL(href, BLOG_URL).toString();
+        if (byUrl.has(url)) return;
+        byUrl.set(url, new Article(title, url, publishedAt, this.name));
+      });
+
+      return [...byUrl.values()].sort(
+        (a, b) => b.publishedAt.getTime() - a.publishedAt.getTime(),
+      );
+    } catch (err) {
+      console.error(`[${this.name}] fetch failed:`, err);
+      return [];
+    }
+  }
+}

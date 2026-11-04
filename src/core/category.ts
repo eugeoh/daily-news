@@ -1,16 +1,23 @@
 /**
  * Digest sections. Order here is the order sections render in.
- * "Frontier Model & Research" exists because most frontier-lab news (model
- * releases, capability/safety research) doesn't fit the other four —
- * "Enterprise" is deliberately scoped tight to partnerships/funding/policy/
- * industry-shift stories, not a catch-all.
+ *
+ * "Documentation & Knowledge" covers Mintlify's direct competitive landscape —
+ * docs platforms, knowledge bases, content tooling.
+ *
+ * "AI Agents & Protocols" captures the macro trend driving Mintlify's strategy —
+ * MCP, autonomous agents, LLM capabilities.
+ *
+ * "Developer Tools & Infrastructure" tracks the broader ecosystem Mintlify
+ * operates in — coding tools, platforms, frameworks.
+ *
+ * "Market & Strategy" is for funding, partnerships, product launches, and
+ * industry shifts that signal where the market is heading.
  */
 export const CATEGORIES = [
-  "Frontier Model & Research",
-  "Software Engineering",
-  "Hardware",
-  "World Models",
-  "Enterprise",
+  "Documentation & Knowledge",
+  "AI Agents & Protocols",
+  "Developer Tools & Infrastructure",
+  "Market & Strategy",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];

@@ -27,7 +27,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** With 17+ sources, a first run or a busy news day can easily exceed the
+/** With 11 sources, a first run or a busy news day can easily exceed the
  * Gemini free tier's 15-requests-per-minute cap. Rather than tune our own
  * conservative throttle, react to the real 429 and back off for however
  * long Gemini's error actually says to wait. */
@@ -40,8 +40,8 @@ async function generateWithRetry(
       return await ai.models.generateContent(params);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const isRateLimit = /429|RESOURCE_EXHAUSTED/.test(message);
-      if (!isRateLimit || attempt === MAX_RATE_LIMIT_RETRIES) throw err;
+      const isRetryable = /429|503|RESOURCE_EXHAUSTED|UNAVAILABLE/.test(message);
+      if (!isRetryable || attempt === MAX_RATE_LIMIT_RETRIES) throw err;
 
       const match = message.match(/"retryDelay":"(\d+)s"/);
       const waitMs = match ? (Number(match[1]) + 1) * 1000 : DEFAULT_RETRY_DELAY_MS;
@@ -74,8 +74,8 @@ async function fetchArticleText(url: string): Promise<string> {
 }
 
 /** Fills in `article.summary` and `article.category` for each article, in
- * place, via Gemini. Falls back to the "Frontier Model & Research" bucket
- * if Gemini returns something outside the fixed category list. */
+ * place, via Gemini. Falls back to "Market & Strategy" if Gemini returns
+ * something outside the fixed category list. */
 export async function summarize(articles: Article[]): Promise<void> {
   if (articles.length === 0) return;
 
@@ -89,18 +89,18 @@ export async function summarize(articles: Article[]): Promise<void> {
     }
 
     const prompt = [
-      "You summarize AI industry news for a general, non-technical reader who doesn't follow the AI industry closely.",
+      "You summarize news for a product engineer at Mintlify (a documentation platform expanding into knowledge bases and AI agents).",
+      "The reader cares about: documentation platforms, developer experience, AI agents consuming docs, knowledge management, MCP protocol, and competitive moves in this space.",
       "Write exactly two short sentences for `summary`:",
-      "1. What happened, in plain language — no jargon, no marketing tone.",
-      "2. Why it's relevant or important — explained simply, as if to a smart friend outside the industry. Don't just restate sentence 1; say what it actually means for users, the company, or the field.",
+      "1. What happened, in plain language.",
+      "2. Why it matters for the documentation/knowledge/agent ecosystem — what does this mean for how developers build, find, or consume knowledge? Be specific, not generic.",
       "No preamble, no headers, just the two sentences.",
       "",
       `Also classify the article into exactly one \`category\` from: ${CATEGORIES.join(", ")}.`,
-      '- "Frontier Model & Research": new model releases, capability or safety research/benchmarks.',
-      '- "Software Engineering": developer tools, frameworks, coding agents, infrastructure/runtime releases.',
-      '- "Hardware": chips, GPUs, physical infrastructure.',
-      '- "World Models": spatial/video/3D world models specifically (not general LLM releases).',
-      '- "Enterprise": partnerships, funding, policy, personnel moves, market/industry shifts.',
+      '- "Documentation & Knowledge": docs platforms, knowledge base tooling, content management systems, technical writing, developer portals, API documentation.',
+      '- "AI Agents & Protocols": MCP protocol, autonomous agents, LLM capabilities/releases, agent frameworks, retrieval-augmented generation, AI-powered search.',
+      '- "Developer Tools & Infrastructure": coding tools, IDEs, platforms, frameworks, runtimes, CI/CD, developer experience.',
+      '- "Market & Strategy": funding rounds, partnerships, acquisitions, product launches, hiring signals, industry analysis, competitive moves.',
       "If more than one could apply, pick the single best fit.",
       "",
       `Title: ${article.title}`,
@@ -117,11 +117,11 @@ export async function summarize(articles: Article[]): Promise<void> {
       });
       const parsed = JSON.parse(response.text ?? "{}") as { summary?: string; category?: string };
       article.summary = parsed.summary?.trim() || null;
-      article.category = isCategory(parsed.category) ? parsed.category : "Frontier Model & Research";
+      article.category = isCategory(parsed.category) ? parsed.category : "Market & Strategy";
     } catch (err) {
       console.error(`[summarize] failed for "${article.title}":`, err);
       article.summary = null;
-      article.category = "Frontier Model & Research";
+      article.category = "Market & Strategy";
     }
   }
 }
@@ -140,21 +140,44 @@ export async function generateOverallSummary(articles: Article[]): Promise<strin
     .map((a) => `- [${a.category ?? "Uncategorized"}] ${a.title} (${a.sourceName}): ${a.summary ?? "(no summary)"}`)
     .join("\n");
 
-  const prompt = [
-    "You write the opening paragraph of a daily AI industry digest for a general reader.",
-    "Voice: like a sharp, well-connected friend in San Francisco giving you the download over coffee — energetic and in-the-know, but still plain English, no hype-speak, no jargon.",
-    "Write 2-4 sentences that call out the day's biggest theme(s) across the stories below. Don't just list every headline — synthesize.",
+  const leadershipPrompt = [
+    "You are the VP of Product at Mintlify, writing a daily leadership briefing for the executive team.",
+    "Mintlify is a documentation platform (22K+ customers including Anthropic, Coinbase, Replit) expanding into internal/external knowledge bases (Mintlify Base) and AI agent infrastructure (MCP servers, Autopilot). Agent traffic on the platform has surpassed human traffic.",
+    "Your competitors are ReadMe and GitBook. The macro tailwind is that documentation is becoming the knowledge layer for AI agents — MCP protocol, llms.txt, and retrieval infrastructure are the battleground.",
+    "",
+    "Based on today's stories, write a SHORT leadership briefing with two sections:",
+    "1. **What matters today** (2-3 sentences): The most important signal(s) from today's news. What should we be paying attention to? Be specific — name companies and moves. Think: what would you bring up in a 5-minute standup with the CEO?",
+    "2. **Implications for us** (2-3 sentences): What does this mean for Mintlify's roadmap, positioning, or competitive strategy? Be direct and opinionated — \"we should\", \"this threatens\", \"this validates\", \"we need to watch\". Think like a leader making product bets, not a journalist reporting news.",
+    "",
+    "Keep it under 150 words total. No preamble. No hedging. Start directly with the content.",
+    "",
+    "Today's stories:",
+    bulletList,
+  ].join("\n\n");
+
+  const digestPrompt = [
+    "You write the opening paragraph of a daily market intelligence digest for a product engineer at Mintlify.",
+    "Mintlify is a documentation platform expanding into internal/external knowledge bases and AI agents. The reader wants a pulse on the market — what competitors are doing, how AI agents are changing knowledge discovery, and where product/market fit opportunities are emerging.",
+    "Voice: like a sharp, well-connected friend giving you the download over coffee — energetic and in-the-know, but plain English, no hype-speak.",
+    "Write 2-4 sentences that call out the day's biggest theme(s) across the stories below. Focus on what matters for Mintlify's positioning. Don't just list every headline — synthesize.",
     "No preamble like \"Here's your summary\" — start directly with the content.",
     "",
     "Today's stories:",
     bulletList,
   ].join("\n\n");
 
-  try {
-    const response = await generateWithRetry(ai, { model: MODEL, contents: prompt });
-    return response.text?.trim() || null;
-  } catch (err) {
-    console.error("[summarize] failed to generate overall summary:", err);
-    return null;
-  }
+  const [leadership, digest] = await Promise.all([
+    generateWithRetry(ai, { model: MODEL, contents: leadershipPrompt })
+      .then((r) => r.text?.trim() || null)
+      .catch((err) => { console.error("[summarize] leadership briefing failed:", err); return null; }),
+    generateWithRetry(ai, { model: MODEL, contents: digestPrompt })
+      .then((r) => r.text?.trim() || null)
+      .catch((err) => { console.error("[summarize] digest summary failed:", err); return null; }),
+  ]);
+
+  if (!leadership && !digest) return null;
+  const parts: string[] = [];
+  if (leadership) parts.push(`### Mintlify Leadership Briefing\n\n${leadership}`);
+  if (digest) parts.push(digest);
+  return parts.join("\n\n---\n\n");
 }

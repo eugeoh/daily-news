@@ -15,6 +15,11 @@ async function main(): Promise<void> {
   const { fresh, seen } = await dedupe(candidates);
   console.log(`${fresh.length} new article(s) after dedupe.`);
 
+  if (fresh.length === 0) {
+    console.log("No new articles — skipping summarization and email.");
+    return;
+  }
+
   await summarize(fresh);
   const overallSummary = await generateOverallSummary(fresh);
 

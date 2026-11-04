@@ -1,8 +1,9 @@
-# daily-news
+# Eug's Daily Digest
 
-A daily, plain-English digest of what the frontier AI labs (and the wider
-AI-adjacent dev/hardware world) shipped — fetched by a GitHub Actions cron
-job, summarized and categorized by Gemini, and emailed to you.
+Market intelligence for Mintlify — a daily, plain-English digest of what's
+happening across documentation platforms, AI agents, and developer tools.
+Fetched by a GitHub Actions cron job, summarized and categorized by Gemini,
+and emailed to you. If there are no new articles, no email is sent.
 
 ## How it works
 
@@ -21,43 +22,32 @@ Every source is a small class extending `NewsSource`
 (`src/core/NewsSource.ts`) that implements one method — `fetch(): Promise<Article[]>`.
 They're registered in `src/sources/index.ts`.
 
-| Source | Method |
-|---|---|
-| Anthropic | scrape (`/news` listing) |
-| OpenAI | RSS |
-| Thinking Machines | scrape (`/blog` + `/news` listings) |
-| Google DeepMind | RSS |
-| Mistral AI | RSS |
-| Hugging Face | RSS |
-| World Labs | scrape |
-| Runway | scrape (joined against sitemap for dates) |
-| Decart | scrape |
-| GitHub Blog | RSS (AI & ML category only) |
-| Bun | RSS |
-| Vercel | RSS (filtered to `/blog/`, excludes changelog noise) |
-| Cursor | scrape |
-| LangChain | RSS |
-| NVIDIA | RSS (generative-AI category only) |
-| Intel | RSS |
-| xAI | **stub** — Cloudflare-gated, no RSS found |
-| Meta AI | **stub** — rejects plain HTTP requests, no RSS found |
-
-The two stubs return `[]` and log why; picking them back up would need a
-headless-browser fetch, which is out of scope for this lightweight script.
+| Source | Method | Why |
+|---|---|---|
+| Mintlify | scrape | Own product — track launches, positioning |
+| ReadMe | scrape | Direct competitor |
+| GitBook | scrape | Direct competitor |
+| Anthropic | scrape (`/news` listing) | MCP creator, biggest Mintlify customer |
+| OpenAI | RSS | Agent ecosystem, ChatGPT/Codex |
+| LangChain | RSS | Agent frameworks, RAG tooling |
+| Hugging Face | RSS | Open AI ecosystem, model releases |
+| Cursor | scrape | AI coding, heavy docs consumer |
+| Vercel | RSS (filtered to `/blog/`) | Developer platform ecosystem |
+| GitHub Blog | RSS (AI & ML category) | Developer tools, Copilot |
+| Replit | scrape | Mintlify customer, AI coding platform |
 
 ### Categories
 
-Gemini classifies every article into one of five sections
+Gemini classifies every article into one of four sections
 (`src/core/category.ts`), in this order:
 
-1. **Frontier Model & Research** — new model releases, capability/safety research
-2. **Software Engineering** — dev tools, frameworks, coding agents, runtimes
-3. **Hardware** — chips, GPUs, physical infrastructure
-4. **World Models** — spatial/video/3D world models specifically
-5. **Enterprise** — partnerships, funding, policy, personnel, industry shifts
+1. **Documentation & Knowledge** — docs platforms, knowledge bases, content tooling
+2. **AI Agents & Protocols** — MCP, agents, LLMs, agent frameworks
+3. **Developer Tools & Infrastructure** — coding tools, platforms, frameworks, runtimes
+4. **Market & Strategy** — funding, partnerships, product launches, industry shifts
 
 An opening paragraph (also Gemini-generated) synthesizes the day's biggest
-theme(s) across every category before the sections themselves.
+theme(s) through the lens of Mintlify's market position.
 
 ## Setup
 
@@ -82,21 +72,19 @@ public).
 
 ## Running the daily job
 
-`.github/workflows/daily-digest.yml` runs on a cron (07:00 AEST /
-08:00 AEDT — GitHub Actions cron is fixed UTC and doesn't shift for daylight
-saving) and supports manual runs via `workflow_dispatch`. It needs the four
-secrets above set on the repo before it can send anything. Each successful
-run commits that day's `digests/YYYY-MM-DD.md` and the updated
+`.github/workflows/daily-digest.yml` runs on a cron (21:00 UTC) and
+supports manual runs via `workflow_dispatch`. It needs the four secrets
+above set on the repo before it can send anything. Each successful run
+commits that day's `digests/YYYY-MM-DD.md` and the updated
 `data/seen.json` (dedupe cache) back to `main`.
 
 ## Adding a new source
 
 1. Create `src/sources/<name>.ts` with a class extending `NewsSource`.
    - Prefer RSS/Atom if the site has one — use `fetchRssArticles()` from
-     `src/core/rss.ts`, it's a few lines (see `src/sources/mistral.ts`).
+     `src/core/rss.ts`, it's a few lines (see `src/sources/langchain.ts`).
    - Otherwise scrape with `cheerio` via `fetchHtml()` from `src/core/http.ts`
-     (see `src/sources/anthropic.ts` or `src/sources/decart.ts` for two
-     different card-markup patterns).
+     (see `src/sources/anthropic.ts` or `src/sources/mintlify.ts`).
    - Bound the very first run with a `LOOKBACK_DAYS` cutoff (7 is the
      convention here) so an empty dedupe cache doesn't try to summarize
      years of back-catalog.

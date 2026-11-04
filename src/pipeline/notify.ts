@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM_NAME = "Euji Daily AI Digest";
+const FROM_NAME = "Eug's Daily Digest";
 
 /** Minimal, dependency-free markdown→HTML for our own predictable digest
  * shape (#, ###, [text](url) links, italic source lines, --- separators).
@@ -40,12 +40,9 @@ export async function notify(markdown: string, articleCount: number, dateStr: st
   if (!apiKey) throw new Error("RESEND_API_KEY is not set");
   if (to.length === 0) throw new Error("DIGEST_TO_EMAIL is not set");
 
-  const resend = new Resend(apiKey);
-  const subject =
-    articleCount > 0
-      ? `Daily AI Lab Digest — ${dateStr} (${articleCount} update${articleCount === 1 ? "" : "s"})`
-      : `Daily AI Lab Digest — ${dateStr} (no updates)`;
+  const subject = `Eug's Daily Digest — ${dateStr} (${articleCount} update${articleCount === 1 ? "" : "s"})`;
 
+  const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
     from,
     to,
