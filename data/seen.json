@@ -1,6 +1,7 @@
 [
   "https://cursor.com/blog/claude-code-extension-security-notice",
   "https://cursor.com/blog/projects-multiplayer",
+  "https://cursor.com/blog/security-incident-update",
   "https://github.blog/ai-and-ml/github-copilot/beyond-code-generation-a-developers-guide-to-agentic-engineering/",
   "https://github.blog/ai-and-ml/github-copilot/build-once-run-on-any-agent-a-practical-guide-to-agent-skills/",
   "https://huggingface.co/blog/3d-lora-finetuning",
@@ -127,6 +128,7 @@
   "https://www.langchain.com/blog/context-engineering-deep-agents-remember",
   "https://www.langchain.com/blog/context-engineering-starts-with-retrieval",
   "https://www.langchain.com/blog/design-agent",
+  "https://www.langchain.com/blog/goal-engineering",
   "https://www.langchain.com/blog/gtm-agent-high-quality-sales-artifacts",
   "https://www.langchain.com/blog/how-stripe-built-their-knowledge-ai-platform-on-deep-agents",
   "https://www.langchain.com/blog/how-we-optimized-browser-use-for-deep-agents",
